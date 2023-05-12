@@ -5,7 +5,7 @@ from PIL import Image, ImageTk
 window = tk.Tk()
 
 # 加载图像
-image_path = "calligraphy.JPG"  # 替换为你的图像路径
+image_path = "../calligraphy.JPG"  # 替换为你的图像路径
 original_image = Image.open(image_path)
 
 # 裁剪图像

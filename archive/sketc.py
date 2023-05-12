@@ -11,7 +11,7 @@ brush_size = 10
 start_time = None
 
 # 加载背景图片
-background_image = Image.open("xiaoyaoyou.jpeg")
+background_image = Image.open("../xiaoyaoyou.jpeg")
 background_image = background_image.resize((canvas_width, canvas_height))
 background_image_tk = ImageTk.PhotoImage(background_image)
 
