@@ -10,7 +10,7 @@ window.title("Image Revealer")
 window.configure(bg="black")
 
 # 加载图片
-image_path = "../calligraphy.JPG"  # 替换为你的图片路径
+image_path = "../pics/calligraphy.JPG"  # 替换为你的图片路径
 image = cv2.imread(image_path)
 image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # 转换为灰度图像
 image = color_inv(image)

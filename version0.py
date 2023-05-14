@@ -4,6 +4,10 @@ import tkinter as tk
 from tkinter import filedialog
 from PIL import ImageTk, Image
 
+"""
+主要是做了逍遥游三个字的版本，膨胀效果还不太满意。
+"""
+
 def erode_image(event):
     global eroded_image, dilated_image
     # 根据鼠标按压时间计算膨胀迭代次数
@@ -81,7 +85,7 @@ def open_image():
     # 打开文件选择对话框以选择图像
     # file_path = filedialog.askopenfilename()
     # 逍遥游3个字
-    file_path = "/xiaoyaoyou.jpeg"
+    file_path = "pics/xiaoyaoyou.jpeg"
     # 全图
     # file_path = "/Users/yexl_uk/PycharmProjects/pythonProject/calligraphy.JPG"
     # 读取图像文件

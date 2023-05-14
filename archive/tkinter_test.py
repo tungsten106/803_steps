@@ -39,7 +39,7 @@ from tkinter import ttk
 win = tk.Tk()
 from PIL import ImageTk, Image
 
-img = Image.open('../xiaoyaoyou.jpeg')
+img = Image.open('../pics/xiaoyaoyou.jpeg')
 size = img.size
 print(size)
 # win.geometry('200x800')

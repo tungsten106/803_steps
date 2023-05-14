@@ -20,7 +20,7 @@ def decrease_alpha():
         window.after(100, decrease_alpha)
 
 def update_image():
-    img = Image.open("../xiaoyaoyou.jpeg")
+    img = Image.open("../pics/xiaoyaoyou.jpeg")
     img = img.convert("RGBA")
     data = img.getdata()
 
@@ -52,7 +52,7 @@ window.title("图片透明度调整")
 canvas = tk.Canvas(window, width=400, height=400, bg="black")
 canvas.pack()
 
-image = Image.open("../xiaoyaoyou.jpeg")
+image = Image.open("../pics/xiaoyaoyou.jpeg")
 photo = ImageTk.PhotoImage(image)
 image_item = canvas.create_image(200, 200, image = photo)
 

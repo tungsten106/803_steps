@@ -4,6 +4,11 @@ from PIL import ImageTk, Image
 
 from utils import *
 
+"""version1.0: 满足了效果的基本要求，下面需要微调
+"""
+# TODO: 更改字迹显示范围的形状 正方形 -> 不规则 -> 随机不规则
+# TODO: 上传github
+
 
 def draw_dilate(mouse_x, mouse_y):
     global dilate_index, mouse_pressed
@@ -97,7 +102,7 @@ window.title("Image Revealer")
 window.configure(bg="black")
 
 # 加载图片
-image_path = "calligraphy.JPG"  # 替换为你的图片路径
+image_path = "pics/calligraphy.JPG"  # 替换为你的图片路径
 image = cv2.imread(image_path)
 image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)  # 转换为灰度图像
 image = color_inv(image)
