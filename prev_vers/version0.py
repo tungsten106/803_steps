@@ -85,7 +85,7 @@ def open_image():
     # 打开文件选择对话框以选择图像
     # file_path = filedialog.askopenfilename()
     # 逍遥游3个字
-    file_path = "pics/xiaoyaoyou.jpeg"
+    file_path = "../pics/xiaoyaoyou.jpeg"
     # 全图
     # file_path = "/Users/yexl_uk/PycharmProjects/pythonProject/calligraphy.JPG"
     # 读取图像文件

@@ -1,33 +1,7 @@
 import cv2
 from polygons_1_1_2 import *
-import io
-from PIL import ImageGrab, Image
-from PIL import Image, ImageDraw
-from quad_tree_csdn import *
 
-def get_screenshot(canvas):
-    # 获取Canvas的信息
-    file_name = "tmp"
-    canvas.postscript(file=file_name + '.eps')
-    image = Image.open(file_name + '.eps')
 
-    # 显示PIL图像
-    # image.show()
-    return image
-
-def get_screenshot_1(window, canvas):
-    # 获取Canvas的屏幕坐标
-    x = window.winfo_rootx() + canvas.winfo_x()
-    y = window.winfo_rooty() + canvas.winfo_y()
-    width = canvas.winfo_width()
-    height = canvas.winfo_height()
-
-    # 从屏幕中截取Canvas的部分
-    screenshot = ImageGrab.grab((x, y, x + width, y + height))
-
-    # 将截图转换为NumPy数组
-    # return np.array(screenshot)
-    return screenshot
 def crop_polygon(image, polygon):
     # 创建黑色背景图像
     mask = np.zeros(image.shape[:2], dtype=np.uint8)
@@ -45,6 +19,49 @@ def crop_polygon(image, polygon):
     cropped_image = masked_image
 
     return cropped_image
+
+# def crop_polygon(image, polygon):
+#     # 创建黑色背景图像
+#     mask = np.zeros(image.shape, dtype=np.uint8)
+#     polygon = np.array(polygon, dtype=np.int32)
+#
+#     # 使用多边形坐标绘制填充区域
+#     cv2.fillPoly(mask, [polygon], 255)
+#
+#     # 将掩码应用于图像
+#     masked_image = cv2.bitwise_and(image, image, mask=mask)
+#
+#     # 将Numpy数组转换为PIL图像
+#     # cropped_image = Image.fromarray(masked_image)
+#     cropped_image = masked_image
+#
+#     return cropped_image
+
+def dilate_polygon(img, size, threshold=128, polygon=None):
+    """
+    dilate algo from chatgpt, but provide a polygon.
+    :param img: ndarray image to dilate
+    :param size: size of block around each pixels to compute average
+    :param threshold: default=128, avg>threshold then white
+    :return: dilated image
+    """
+    for x in range(img.shape[0]):
+        for y in range(img.shape[1]):
+            # justify if (x, y) in polygon
+            if not polygon.is_in_poly(p=(x, y)):
+                img[x][y] = 0
+                continue
+            xlim1 = max(x - size, 0)
+            xlim2 = min(x + size + 1, img.shape[0])
+            ylim1 = max(y - size, 0)
+            ylim2 = min(y + size + 1, img.shape[1])
+            avg = np.mean(img[xlim1:xlim2, ylim1:ylim2])
+
+            if avg > threshold:
+                img[x][y] = 225
+            else:
+                img[x][y] = 0
+    return img
 
 
 def dilate2(img, size, threshold=128):
@@ -64,7 +81,7 @@ def dilate2(img, size, threshold=128):
             avg = np.mean(img[xlim1:xlim2, ylim1:ylim2])
 
             if avg > threshold:
-                img[x][y] = 255
+                img[x][y] = 225
             else:
                 img[x][y] = 0
     return img

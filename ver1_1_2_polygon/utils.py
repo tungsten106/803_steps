@@ -1,33 +1,7 @@
 import cv2
 from polygons_1_1_2 import *
-import io
-from PIL import ImageGrab, Image
-from PIL import Image, ImageDraw
-from quad_tree_csdn import *
 
-def get_screenshot(canvas):
-    # 获取Canvas的信息
-    file_name = "tmp"
-    canvas.postscript(file=file_name + '.eps')
-    image = Image.open(file_name + '.eps')
 
-    # 显示PIL图像
-    # image.show()
-    return image
-
-def get_screenshot_1(window, canvas):
-    # 获取Canvas的屏幕坐标
-    x = window.winfo_rootx() + canvas.winfo_x()
-    y = window.winfo_rooty() + canvas.winfo_y()
-    width = canvas.winfo_width()
-    height = canvas.winfo_height()
-
-    # 从屏幕中截取Canvas的部分
-    screenshot = ImageGrab.grab((x, y, x + width, y + height))
-
-    # 将截图转换为NumPy数组
-    # return np.array(screenshot)
-    return screenshot
 def crop_polygon(image, polygon):
     # 创建黑色背景图像
     mask = np.zeros(image.shape[:2], dtype=np.uint8)
@@ -64,7 +38,7 @@ def dilate2(img, size, threshold=128):
             avg = np.mean(img[xlim1:xlim2, ylim1:ylim2])
 
             if avg > threshold:
-                img[x][y] = 255
+                img[x][y] = 225
             else:
                 img[x][y] = 0
     return img

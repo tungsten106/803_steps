@@ -1,8 +1,6 @@
-import tkinter as tk
-import cv2
 from PIL import ImageTk, Image
 
-from utils import *
+from ver1_1_2_polygon.utils import *
 
 # 创建主窗口
 window = tk.Tk()
