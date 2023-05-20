@@ -1,6 +1,4 @@
-from PIL import ImageTk, Image
-from PIL import ImageGrab
-from ref_csdn import *
+from ver_2_x.ref_csdn import *
 
 from utils import *
 from polygons_1_1_2 import *

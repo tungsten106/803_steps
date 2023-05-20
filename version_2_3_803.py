@@ -1,9 +1,6 @@
-from PIL import ImageTk, Image
-from PIL import ImageGrab
-from ref_csdn import *
-
-from utils import *
 from polygons_1_1_2 import *
+from quad_tree_csdn import *
+import cv2
 
 """
 version2.3: 添加了产生quadtree的功能，基本实现效果
