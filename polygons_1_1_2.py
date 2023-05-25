@@ -33,7 +33,7 @@ class Polygon_112:
         if dist_range is not None:
             self.dist_range = dist_range
         else:
-            self.dist_range = (10, size)
+            self.dist_range = (size // 2, size)
         if distances is not None:
             self.distances = distances
         else:
@@ -80,12 +80,17 @@ class Polygon_112:
         return is_in
 
     # functions for "update" polygons
-    def update_polygon(self, new_size):
+    def update_polygon(self, new_size, new_center=None):
         new_dist = self.distances * new_size / self.size
         new_range = (self.dist_range[0], new_size)
 
+        if new_center:
+            center = new_center
+        else:
+            center = self.center
+
         return Polygon_112(n=self.n,
-                           size=new_size, center=self.center,
+                           size=new_size, center=center,
                            angles=self.angles,
                            distances=new_dist,
                            dist_range=new_range)
@@ -97,7 +102,7 @@ class Polygon_112:
             # print(new_vertices[i])
             # new_vertices[i] += [dx, dy]
             x, y = new_vertices[i]
-            new_vertices[i] = (x+dx, y+dy)
+            new_vertices[i] = (x + dx, y + dy)
 
             # print("new vertices: ", new_vertices[i])
         return new_vertices

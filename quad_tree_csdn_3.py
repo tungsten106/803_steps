@@ -1,6 +1,6 @@
 import cv2
 from utils import *
-
+import random
 
 # 正方形类
 class square:
@@ -16,25 +16,25 @@ class square:
     # 返回值：布尔类型
     def check(self, matrix, threshold, min_sq_size=10):
         # 小于10的块就不再分了，太小没啥意义
-        if abs(self.rx - self.lx) <= min_sq_size:
+        if abs(self.rx - self.lx) <= 5:
             return True
-        min = matrix[self.lx][self.ly]
-        max = matrix[self.lx][self.ly]
-        for i in range(self.lx, self.rx):
-            for j in range(self.ly, self.ry):
-                if matrix[i][j] < min:
-                    min = matrix[i][j]
-                if matrix[i][j] > max:
-                    max = matrix[i][j]
-        print(min, max, minVal, maxVal)
-        if abs(max - min) >= threshold:
-            return False
+        else:
+            if random.random() > 0.75:
+                return False
+            else:
+                return True
 
 
-        # minVal, maxVal,_, _ = cv2.minMaxLoc(matrix[self.lx:self.rx, self.ly:self.ry])
+        # minVal, maxVal, _, _ = cv2.minMaxLoc(matrix[self.lx:self.rx, self.ly:self.ry])
         # # print(matrix[self.lx:self.rx, self.ly:self.ry].shape, self.lx, self.rx, self.ly, self.ry)
-        # if abs(minVal-maxVal) >= threshold:
+        # if abs(minVal - maxVal) >= threshold:
         #     return False
+        # x_mean = np.mean(matrix[self.lx:self.rx, self.ly])
+        # y_mean = np.mean(matrix[self.lx, self.ly:self.ry])
+        # if x_mean <= 200 or y_mean <= 200:
+        #     return False
+
+
         return True
 
     # 打印正方形的坐标
@@ -58,6 +58,14 @@ def check_all(matrix, square_arr, min_sq=5):
 # 得到最终的四叉树
 def get_quad_tree(matrix, square_arr, min_sq=5):
     while (True):
+        # # problem_block, index = check_all(matrix, square_arr, min_sq=min_sq)
+        # # if problem_block == None:
+        # #     break
+        # lx = square_arr[0].lx
+        # ly = square_arr[0].ly
+        # rx = square_arr[0].rx
+        # ry = square_arr[0].ry
+
         problem_block, index = check_all(matrix, square_arr, min_sq=min_sq)
         if problem_block == None:
             break
@@ -65,6 +73,8 @@ def get_quad_tree(matrix, square_arr, min_sq=5):
         ly = problem_block.ly
         rx = problem_block.rx
         ry = problem_block.ry
+        # if abs(lx-rx) < 20 or abs(ly-ry) < 20:
+        #     break
         # 左上角
         divide_block1 = square(lx, ly, (lx + rx) // 2, (ly + ry) // 2)
         # 右上角
@@ -153,7 +163,6 @@ def get_quad_grid(screenshot, min_sq=5):
 #
 # Image.fromarray(mask_np).show()
 # cv2.imwrite('/result.png', mask_np)
-
 
 
 # # print(matrix)
