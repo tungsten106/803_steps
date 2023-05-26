@@ -1,9 +1,9 @@
 from polygons_1_1_2 import *
-from quad_tree_csdn_3 import *
+from quad_tree_csdn_new import *
 import cv2
 
 """
-version2.4: 实现了底层逻辑的效果；完成了窗口尺寸和画布尺寸的匹配。
+version3.3: quad_tree_csdn_new.py, 算法改进
 """
 
 
@@ -26,31 +26,29 @@ def draw_dilate(mouse_x, mouse_y, sq_size):
     height = min(sq_size, canvas_height - y)
     new_subimage = image_pil.crop((x, y, x + width, y + height))
 
-    bounded_img = Image.new("RGB", (boundary_size, boundary_size), "black")
+    bounded_img = Image.new("RGB", (canvas_width, canvas_width), "black")
     bounded_img.paste(new_subimage,
-                      (boundary_size // 2 - sq_size // 2,
-                       boundary_size // 2 - sq_size // 2))  # 将b贴到a的坐标为（50，50）的位置，以图片左上角为坐标原点，这里说的是原点的移动
+                      (x, y))  # 将b贴到a的坐标为（0,0）的位置，以图片左上角为坐标原点，这里说的是原点的移动
     # bounded_img.show()
     bounded_img = np.array(bounded_img)
     bounded_img = cv2.cvtColor(bounded_img, cv2.COLOR_BGR2GRAY)  # 转换为灰度图像
 
     cropped_sub_small = np.array(bounded_img)
-    # dilate
-    dilate_index -= 1
-    # dilate_index = max(0, dilate_index)
-    if dilate_index >= 0:
-        dilated_img = dilate2(cropped_sub_small, dilate_index, 128 - 2 * dilate_index)
-    else:
-        dilate_index = max(-max_dilate, dilate_index)
-        dilated_img = cv2.dilate(cropped_sub_small, kernel, iterations=abs(dilate_index))
+    # # dilate
+    # dilate_index -= 1
+    # # dilate_index = max(0, dilate_index)
+    # if dilate_index >= 0:
+    #     dilated_img = dilate2(cropped_sub_small, dilate_index, 128 - 2 * dilate_index)
+    # else:
+    #     dilate_index = max(-max_dilate, dilate_index)
+    #     dilated_img = cv2.dilate(cropped_sub_small, kernel, iterations=abs(dilate_index))
 
-    screenshot = get_quad_grid(dilated_img, min_sq=sq_size / (2 ** quad_power))
+    screenshot = get_quad_grid(cropped_sub_small, min_sq=sq_size / (2 ** quad_power),
+                               subimage_coord=(x, y, x + width, y + height))
 
     sub_photo = ImageTk.PhotoImage(Image.fromarray(screenshot))
 
-    x = max(0, pressed_x - boundary_size // 2)
-    y = max(0, pressed_y - boundary_size // 2)
-    canvas.create_image(x, y, anchor=tk.NW, image=sub_photo, tags="revealed_image")
+    canvas.create_image(0,0, anchor=tk.NW, image=sub_photo, tags="revealed_image")
 
     # 保留对sub_photo的引用
     canvas.sub_photo = sub_photo
@@ -69,6 +67,8 @@ def draw_erode(mouse_x, mouse_y, sq_size):
     sq_size = cropped_sub_small.shape[0] // 2
     x = max(0, mouse_x - sq_size)
     y = max(0, mouse_y - sq_size)
+    width = min(sq_size, canvas_width - x)
+    height = min(sq_size, canvas_height - y)
 
     # 开始腐蚀
     # sub_image = dilate2(sub_image, abs(dilate_index), 128 + 2 * dilate_index)
@@ -81,10 +81,11 @@ def draw_erode(mouse_x, mouse_y, sq_size):
     dilate_index += 1
     # dilate_index = min(20, dilate_index)
 
-    screenshot = get_quad_grid(eroded_subimage, min_sq=sq_size / (2 ** quad_power))
-    # cropped_shot = crop_polygon(screenshot, new_polygon)
+    screenshot = get_quad_grid(eroded_subimage, min_sq=sq_size / (2 ** quad_power),
+                               subimage_coord=(x, y, x + width, y + height))
     sub_photo = ImageTk.PhotoImage(Image.fromarray(screenshot))
-    canvas.create_image(x, y, anchor=tk.NW, image=sub_photo, tags="revealed_image")
+    # sub_photo = ImageTk.PhotoImage(Image.fromarray(eroded_subimage))
+    canvas.create_image(0,0, anchor=tk.NW, image=sub_photo, tags="revealed_image")
 
     # 保留对sub_photo的引用
     canvas.sub_photo = sub_photo
@@ -170,9 +171,9 @@ for j in range(1, n_col):
     canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
 
 # parameters
-boundary_size = int(canvas_width // 6)  # 膨胀界限
+boundary_size = int(canvas_width//3)  # 膨胀界限
 max_sq_size = int(canvas_width // n_col)  # 图片扩大最大尺寸
-init_sq_size = 5
+init_sq_size = 10
 poly_n = 15
 poly_range = (init_sq_size, max_sq_size)
 mouse_pressed = False
@@ -193,6 +194,8 @@ mode_table = np.array(
         [4, 4, 2, 4, 2, 2, 2, 3, 3]
     ]
 )
+
+
 def get_mode(x, y):
     return mode_table[int(y // grid_width)][int(x // grid_height)] - 1
     # return min(int((x // (canvas_width // 2)) + 2 * (y // (canvas_height // 2))), 4)
