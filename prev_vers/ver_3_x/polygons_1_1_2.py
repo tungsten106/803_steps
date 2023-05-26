@@ -37,10 +37,9 @@ class Polygon_112:
         if distances is not None:
             self.distances = distances
         else:
-            # self.distances = np.random.uniform(self.dist_range[0],
-            #                                    self.dist_range[1],
-            #                                    self.n)
-            self.distances = size//2 + np.random.uniform(10, -10, self.n)
+            self.distances = np.random.uniform(self.dist_range[0],
+                                               self.dist_range[1],
+                                               self.n)
 
         # 根据输入/生成的angles和diatnces 生成顶点坐标
         self.vertices = self.create()

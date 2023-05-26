@@ -1,6 +1,6 @@
 from PIL import ImageTk, Image
 
-from ver1_1_2_polygon.utils import *
+from prev_vers.ver1_1_2_polygon.utils import *
 
 # 创建主窗口
 window = tk.Tk()

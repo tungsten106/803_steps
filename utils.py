@@ -7,7 +7,7 @@ import cv2
 
 def crop_polygon(image, polygon):
     # 创建黑色背景图像
-    mask = np.zeros(image.shape[:2], dtype=np.uint8)
+    mask = np.zeros(image.shape, dtype=np.uint8)
 
     # polygon = Polygon_112(n=poly_n, int(image.shape[0]), (int(image.shape[1]//2),
     #                                       int(image.shape[0]//2)))

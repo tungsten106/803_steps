@@ -33,7 +33,7 @@ class QuadTreeVisualizer:
 
     def update(self):
         # control variation speed
-        self.variation += 0.004
+        self.variation += 0.003
 
     def draw(self, canvas):
         self.quad_tree(canvas, self.width / 2, self.height / 2, self.max_rect_size)
@@ -43,11 +43,11 @@ class QuadTreeVisualizer:
             return
         # n = self.noise((x + self.pos_x) * 0.001, (y + self.pos_y) * 0.001, self.variation)
         # print(x, y, self.dist_to_center(x, y))
-        n = noise.snoise3((x + self.pos_x) * 0.0005, (y + self.pos_y) * 0.0005, self.variation)
-        # n = noise.pnoise3((x + self.pos_x) * 0.001, (y + self.pos_y) * 0.001, 0.5)
+        # n = noise.pnoise3((x + self.pos_x) * 0.004, (y + self.pos_y) * 0.004, self.variation)
+        n = noise.snoise3((x + self.pos_x) * 0.001, (y + self.pos_y) * 0.001, self.variation)
         # if abs(n - 0.2) > (size / self.max_rect_size):
-        c = size //2
-        if ((x-c*n)**2+(y-c*n)**2) <= 300:
+        c = size // 2
+        if ((abs(x-c*n)-300)**2+(abs(y-c*n)-400)**2)**0.5 <= 100:
             canvas.create_rectangle(x - size / 2, y - size / 2,
                                     x + size / 2, y + size / 2,
                                     outline="white")
@@ -58,13 +58,6 @@ class QuadTreeVisualizer:
             self.quad_tree(canvas, x + d, y - d, size)
             self.quad_tree(canvas, x - d, y + d, size)
             self.quad_tree(canvas, x - d, y - d, size)
-
-    # def noise(self, x, y, variation):
-    #     return math.sin(x * 0.1) * math.cos(y * 0.1) + math.sin((x + y) * 0.05) * variation
-    def dist_to_center(self, x, y):
-        center = (100, 200)
-        radius = 50
-        return abs(((x - center[0]) ** 2 + (y - center[1]) ** 2) ** 0.5)
 
 # 使用示例
 if __name__ == "__main__":

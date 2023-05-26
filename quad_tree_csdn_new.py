@@ -1,5 +1,6 @@
 import cv2
 from utils import *
+import random
 
 
 # 正方形类
@@ -14,29 +15,47 @@ class square:
     # 检查该矩阵中是否满足条件
     # 参数：原矩阵，阈值
     # 返回值：布尔类型
-    def check(self, matrix, threshold, min_sq_size=10):
-        # 小于10的块就不再分了，太小没啥意义
+    def check(self, matrix, threshold, min_sq_size=10, subimage_coord=(0, 0, 1, 1)):
+        # 小于min_sq_size的块就不再分了，太小没啥意义
+        # mouse_x, mouse_y = mouse
+        ly, lx, ry, rx = subimage_coord
         if abs(self.rx - self.lx) <= min_sq_size:
             return True
-        # if abs(self.rx - self.lx) >= 100:
+        # 判断两个矩形没有重叠
+        # if (self.ry < ly) and (self.ly > ry) and (self.rx > lx) and (self.lx < rx):
+        # if self.lx > rx or self.ly < ry or self.rx >lx or self.ry > ly: # 没有重叠
+        # if self.lx < rx and self.ly > ry and self.rx <lx and self.ry < ly:  # 有重叠
+        if self.lx > rx or self.ly > ry or lx > self.rx or ly > self.ry:
+            return True
+        else:
+            if abs(self.rx - self.lx) <= 20:
+                # print((self.lx, self.ly, self.rx, self.ry), (subimage_coord))
+                minVal, maxVal, _, _ = cv2.minMaxLoc(matrix[self.lx:self.rx, self.ly:self.ry])
+                # print(matrix[self.lx:self.rx, self.ly:self.ry].shape, self.lx, self.rx, self.ly, self.ry)
+                if abs(minVal - maxVal) >= threshold:
+                    return False
+                else:
+                    return True
+            else:
+                return False
+
+            # 有重叠且大于某个大小
+        # ————————————————
+        # 版权声明：本文为CSDN博主「i_wooden」的原创文章，遵循CC
+        # 4.0
+        # BY - SA版权协议，转载请附上原文出处链接及本声明。
+        # 原文链接：https: // blog.csdn.net / qianchenglenger / article / details / 50484053
+
+        # minVal, maxVal, _, _ = cv2.minMaxLoc(matrix[self.lx:self.rx, self.ly:self.ry])
+        # # print(matrix[self.lx:self.rx, self.ly:self.ry].shape, self.lx, self.rx, self.ly, self.ry)
+        # if abs(minVal - maxVal) >= threshold:
         #     return False
-        # min = matrix[self.lx][self.ly]
-        # max = matrix[self.lx][self.ly]
-        # for i in range(self.lx, self.rx):
-        #     for j in range(self.ly, self.ry):
-        #         if matrix[i][j] < min:
-        #             min = matrix[i][j]
-        #         if matrix[i][j] > max:
-        #             max = matrix[i][j]
-        # print(min, max, minVal, maxVal)
-        # if abs(max - min) >= threshold:
+        # x_mean = np.mean(matrix[self.lx:self.rx, self.ly])
+        # y_mean = np.mean(matrix[self.lx, self.ly:self.ry])
+        # if x_mean <= 200 or y_mean <= 200:
         #     return False
 
-        minVal, maxVal, _, _ = cv2.minMaxLoc(matrix[self.lx:self.rx, self.ly:self.ry])
-        # print(matrix[self.lx:self.rx, self.ly:self.ry].shape, self.lx, self.rx, self.ly, self.ry)
-        if abs(minVal - maxVal) >= threshold:
-            return False
-        return True
+        # return True
 
     # 打印正方形的坐标
     def print(self):
@@ -49,25 +68,27 @@ class square:
 # 检查所有块里面是否还有不行的
 # 参数：原矩阵、正方形对象列表
 # 返回值：若有不行的，返回对象和下标；否则返回空对象
-def check_all(matrix, square_arr, min_sq=5):
-    for i in range(len(square_arr)):
-        if square_arr[i].check(matrix, 10, min_sq_size=min_sq) == False:  # 阈值在此设置
+def check_all(matrix, square_arr, min_sq=5, subimage_coord=(0, 0, 1, 1),
+              start=0):
+    for i in range(start, len(square_arr)):
+        if square_arr[i].check(matrix, 10, min_sq_size=min_sq,
+                               subimage_coord=subimage_coord) == False:  # 阈值在此设置
+            # print(abs(square_arr[i].lx-square_arr[i].rx))
             return square_arr[i], i
     return None, -1
 
 
 # 得到最终的四叉树
-def get_quad_tree(matrix, square_arr, min_sq=5):
+def get_quad_tree(matrix, square_arr, min_sq=5, subimage_coord=(0, 0, 1, 1)):
+    index = 0
     while (True):
-        # # problem_block, index = check_all(matrix, square_arr, min_sq=min_sq)
-        # # if problem_block == None:
-        # #     break
-        # lx = square_arr[0].lx
-        # ly = square_arr[0].ly
-        # rx = square_arr[0].rx
-        # ry = square_arr[0].ry
-
-        problem_block, index = check_all(matrix, square_arr, min_sq=min_sq)
+        # while True:
+        #     problem_block, index = square_arr[i].check(matrix, 10, min_sq_size=min_sq,
+        #                        subimage_coord=subimage_coord) == False
+        #     i += index
+        problem_block, index = check_all(matrix, square_arr, min_sq=min_sq,
+                                         subimage_coord=subimage_coord,
+                                         start=index)
         if problem_block == None:
             break
         lx = problem_block.lx
@@ -125,13 +146,14 @@ def resize(img, size):
     return rimg
 
 
-def get_quad_grid(screenshot, min_sq=5):
+def get_quad_grid(screenshot, min_sq=5, subimage_coord=(0, 0, 1, 1)):
     matrix = screenshot
     row = matrix.shape[0]
     col = matrix.shape[1]
     first_square = square(0, 0, row - 1, col - 1)
     square_arr = [first_square]
-    square_arr = get_quad_tree(matrix, square_arr, min_sq=min_sq)
+    square_arr = get_quad_tree(matrix, square_arr, min_sq=min_sq,
+                               subimage_coord=subimage_coord)
     for i in square_arr:
         for col in range(i.ly, i.ry):
             screenshot[i.rx][col] = 255

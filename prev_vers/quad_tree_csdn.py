@@ -18,24 +18,23 @@ class square:
         # 小于10的块就不再分了，太小没啥意义
         if abs(self.rx - self.lx) <= min_sq_size:
             return True
-        # if abs(self.rx - self.lx) >= 100:
-        #     return False
-        # min = matrix[self.lx][self.ly]
-        # max = matrix[self.lx][self.ly]
-        # for i in range(self.lx, self.rx):
-        #     for j in range(self.ly, self.ry):
-        #         if matrix[i][j] < min:
-        #             min = matrix[i][j]
-        #         if matrix[i][j] > max:
-        #             max = matrix[i][j]
-        # print(min, max, minVal, maxVal)
-        # if abs(max - min) >= threshold:
-        #     return False
-
-        minVal, maxVal, _, _ = cv2.minMaxLoc(matrix[self.lx:self.rx, self.ly:self.ry])
-        # print(matrix[self.lx:self.rx, self.ly:self.ry].shape, self.lx, self.rx, self.ly, self.ry)
-        if abs(minVal - maxVal) >= threshold:
+        min = matrix[self.lx][self.ly]
+        max = matrix[self.lx][self.ly]
+        for i in range(self.lx, self.rx):
+            for j in range(self.ly, self.ry):
+                if matrix[i][j] < min:
+                    min = matrix[i][j]
+                if matrix[i][j] > max:
+                    max = matrix[i][j]
+        print(min, max, minVal, maxVal)
+        if abs(max - min) >= threshold:
             return False
+
+
+        # minVal, maxVal,_, _ = cv2.minMaxLoc(matrix[self.lx:self.rx, self.ly:self.ry])
+        # # print(matrix[self.lx:self.rx, self.ly:self.ry].shape, self.lx, self.rx, self.ly, self.ry)
+        # if abs(minVal-maxVal) >= threshold:
+        #     return False
         return True
 
     # 打印正方形的坐标
@@ -59,14 +58,6 @@ def check_all(matrix, square_arr, min_sq=5):
 # 得到最终的四叉树
 def get_quad_tree(matrix, square_arr, min_sq=5):
     while (True):
-        # # problem_block, index = check_all(matrix, square_arr, min_sq=min_sq)
-        # # if problem_block == None:
-        # #     break
-        # lx = square_arr[0].lx
-        # ly = square_arr[0].ly
-        # rx = square_arr[0].rx
-        # ry = square_arr[0].ry
-
         problem_block, index = check_all(matrix, square_arr, min_sq=min_sq)
         if problem_block == None:
             break
@@ -74,8 +65,6 @@ def get_quad_tree(matrix, square_arr, min_sq=5):
         ly = problem_block.ly
         rx = problem_block.rx
         ry = problem_block.ry
-        # if abs(lx-rx) < 20 or abs(ly-ry) < 20:
-        #     break
         # 左上角
         divide_block1 = square(lx, ly, (lx + rx) // 2, (ly + ry) // 2)
         # 右上角
@@ -84,15 +73,6 @@ def get_quad_tree(matrix, square_arr, min_sq=5):
         divide_block3 = square((lx + rx) // 2 + 1, ly, rx, (ly + ry) // 2)
         # 右下角
         divide_block4 = square((lx + rx) // 2 + 1, (ly + ry) // 2 + 1, rx, ry)
-
-        # 检验结果是否正确
-        # print("拆分前：")
-        # square_arr[index].print()
-        # print("拆分后：")
-        # divide_block1.print()
-        # divide_block2.print()
-        # divide_block3.print()
-        # divide_block4.print()
 
         # 删掉原来的大矩阵，把新的四个子矩阵加进列表
         del square_arr[index]
@@ -164,6 +144,7 @@ def get_quad_grid(screenshot, min_sq=5):
 #
 # Image.fromarray(mask_np).show()
 # cv2.imwrite('/result.png', mask_np)
+
 
 
 # # print(matrix)
