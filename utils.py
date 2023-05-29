@@ -4,7 +4,6 @@ import numpy as np
 import cv2
 
 
-
 def crop_polygon(image, polygon):
     # 创建黑色背景图像
     mask = np.zeros(image.shape, dtype=np.uint8)
@@ -22,6 +21,29 @@ def crop_polygon(image, polygon):
     cropped_image = masked_image
 
     return cropped_image
+
+
+def dilate3(img, size, threshold=128, step=3):
+    """
+    dilate algo from chatgpt
+    :param img: ndarray image to dilate
+    :param size: size of block around each pixels to compute average
+    :param threshold: default=128, avg>threshold then white
+    :return: dilated image
+    """
+    for x in range(0, img.shape[0], step):
+        for y in range(0, img.shape[1], step):
+            xlim1 = max(x+step//2 - size, 0)
+            xlim2 = min(x+step//2 + size + 1, img.shape[0])
+            ylim1 = max(y+step//2 - size, 0)
+            ylim2 = min(y+step//2 + size + 1, img.shape[1])
+            avg = np.mean(img[xlim1:xlim2, ylim1:ylim2])
+
+            if avg > threshold:
+                img[x:x+step, y:y+step] = 255
+            else:
+                img[x:x+step, y:y+step] = 0
+    return img
 
 
 def dilate2(img, size, threshold=128):

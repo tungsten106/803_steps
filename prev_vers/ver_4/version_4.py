@@ -3,7 +3,7 @@ from quad_tree_csdn_new import *
 import cv2
 
 """
-version3.3: quad_tree_csdn_new.py, 算法改进
+version4.0: quad_tree_csdn_new.py, 算法改进, 调整具体特效
 """
 
 
@@ -190,7 +190,7 @@ canvas_width = 1086
 canvas_height = 600
 # 加载图片 改变图片大小
 # image_path = "pics/calligraphy.JPG"  # 图片路径
-image_path = "pics/xiaoyaoyou_new.jpg"
+image_path = "../../pics/xiaoyaoyou_new.jpg"
 image = Image.open(image_path)
 image = image.resize((canvas_width, canvas_height))
 image = np.array(image)
@@ -214,7 +214,7 @@ for j in range(1, n_col):
     canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
 
 # parameters
-boundary_size = int(canvas_width // 6)  # 膨胀界限
+boundary_size = int(canvas_width // 5)  # 膨胀界限
 max_sq_size = int(canvas_width // n_col)  # 图片扩大最大尺寸
 init_sq_size = 10
 poly_n = 15
