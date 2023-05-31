@@ -263,7 +263,7 @@ window.configure(bg="black")
 
 # 加载图片 改变图片大小
 # image_path = "pics/calligraphy.JPG"  # 图片路径
-image_path = "pics/xiaoyaoyou_new.jpg"
+image_path = "../../pics/xiaoyaoyou_new.jpg"
 image = Image.open(image_path)
 image = image.resize((canvas_width, canvas_height))
 image = np.array(image)
@@ -325,7 +325,7 @@ mouse_pressed = False
 # while(True):
 dilate_index = init_dilate
 
-with open("input.txt") as f:
+with open("../../input.txt") as f:
     coord_list = []
     for line in f:
         coord_list.append((tuple([int(a) for a in line.rstrip('\n').split(" ")])))

@@ -202,7 +202,7 @@ canvas_width = 1086
 canvas_height = 600
 # 加载图片 改变图片大小
 # image_path = "pics/calligraphy.JPG"  # 图片路径
-image_path = "pics/xiaoyaoyou_new.jpg"
+image_path = "../../pics/xiaoyaoyou_new.jpg"
 image = Image.open(image_path)
 image = image.resize((canvas_width, canvas_height))
 image = np.array(image)

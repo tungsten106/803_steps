@@ -1,5 +1,5 @@
 from polygons_1_1_2 import *
-from quad_tree_csdn_2 import *
+from prev_vers.ver_5.quad_tree_csdn_2 import *
 import cv2
 
 """

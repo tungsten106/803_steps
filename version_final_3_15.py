@@ -1,26 +1,49 @@
 from polygons_1_1_2 import *
 from quad_tree_csdn_59 import *
 import cv2
+import serial
+import time
+import struct
+import serial.tools.list_ports
+from Xen202TT01 import Radar
 
 """
-version5.1
+version final!!
+combine programme & position signal input script
+version5.3.1+Xen202TT01
 """
 
 
-# TODO: 1）改变效果  # complete
+# 雷达设定（by林彦
+# serial_port = "COM31"
+#
+# pack_len = 30
+# pack_head = b'\xAA\xFF\03\00'
+# cmd_multi = b'\xFD\xFC\xFB\xFA\x02\x00\x90\x00\x04\x03\x02\x01'
+# cmd_single = b'\xFD\xFC\xFB\xFA\x02\x00\x80\x00\x04\x03\x02\x01'
+#
+# reply_multi = b'\xFD\xFC\xFB\xFA\x04\x00\x90\x01\x01\x00\x04\x03\x02\x01'
+# reply_single = b'\xFD\xFC\xFB\xFA\x04\x00\x80\x01\x01\x00\x04\x03\x02\x01'
 
-#       2) 连接雷达
-# TODO: 上传github
+
+# def on_mouse_release(event):
+#     global mouse_pressed, dilate_index
+#     global pressed_x, pressed_y
+#     x, y = pressed_x, pressed_y
+#     if mouse_pressed:
+#         mouse_pressed = False
+#         draw_erode(x, y)
 
 
+# 特效函数s
 def draw_dilate(sq_size):
     global dilate_index, mouse_pressed, old_polygon, mask
     global cropped_subimage, bounded_img, new_subimage
     global max_dilate, new_polygon, cur_sq_size
 
     cur_sq_size = sq_size
-    if not mouse_pressed:
-        return
+    # if not mouse_pressed:
+    #     return
 
     # 计算要显示的图像位置和大小
     # print(sq_size)
@@ -61,14 +84,14 @@ def draw_dilate(sq_size):
     else:
         if dilate_index >= 0:
             dilated_img = dilate3(bounded_img, dilate_index, 128 - 2 * dilate_index,
-                                  step=sq_size // 10)
+                                  step=init_sq_size // 10)
             dilate_index -= 1
         else:
             # print(dilate_index, max_dilate)
             dilate_index = max(0 - max_dilate, dilate_index)
             dilated_img = cv2.dilate(bounded_img, kernel, iterations=abs(dilate_index))
-            dilate_index -= 3
-    # print(dilate_index)
+            dilate_index -= 10
+    print(dilate_index)
     # print(dilated_img.shape)
 
     # print(dilated_img.shape)
@@ -88,12 +111,12 @@ def draw_dilate(sq_size):
     w_b = boundary_size
     h_b = boundary_size
     if get_mode(pressed_x, pressed_y) == 3:
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x_b, y_b, x_b + w_b, y_b + h_b),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
     else:
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x, y, x + width, y + height),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
@@ -116,14 +139,14 @@ def draw_dilate(sq_size):
     # return
 
 
-def draw_erode():
+def draw_erode(sq_size):
     global dilate_index, mouse_pressed, new_subimage
     global cur_sq_size, new_polygon
     global pressed_x, pressed_y, bounded_img
     if mouse_pressed:
         return
     # 计算要显示的图像位置和大小
-    sq_size = cur_sq_size
+    # sq_size = cur_sq_size
     # x = max(0, pressed_x - sq_size // 2)
     # y = max(0, pressed_y - sq_size // 2)
     # width = min(sq_size, canvas_width - x)
@@ -138,7 +161,7 @@ def draw_erode():
     # sub_image = dilate2(sub_image, abs(dilate_index), 128 + 2 * dilate_index)
     if dilate_index < 0:
         # 更新参数
-        dilate_index += 3
+        dilate_index += 10
         eroded_subimage = cv2.dilate(bounded_img, kernel, iterations=abs(dilate_index))
 
     else:
@@ -161,12 +184,12 @@ def draw_erode():
         y_b = pressed_y - boundary_size // 2
         w_b = boundary_size
         h_b = boundary_size
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x_b, y_b, x_b + w_b, y_b + h_b),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
     else:
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x, y, x + width, y + height),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
@@ -194,11 +217,14 @@ def draw_erode():
     return
 
 
-def on_mouse_press(pressed_x, pressed_y, n_iters=50, sq_size=10):
-    global mouse_pressed, dilate_index, cropped_subimage
+# 鼠标函数s
+def on_mouse_press(pressed_x, pressed_y,
+                   sq_size=10, mouse_pressed=True):
+    global dilate_index, cropped_subimage
     global old_polygon, bounded_img
     # global pressed_x, pressed_y
-    global max_dilate
+    global max_dilate, coord_list, last_coord
+    global radar
     dilate_index = init_dilate
     # pressed_x, pressed_y = event.x, event.y
 
@@ -220,16 +246,27 @@ def on_mouse_press(pressed_x, pressed_y, n_iters=50, sq_size=10):
                               size=max_sq_size)
     cropped_subimage = crop_polygon(np.array(sub_image), old_polygon)
     bounded_img = cropped_subimage
-    mouse_pressed = True
-    for i in range(n_iters):
+    # mouse_pressed = True
+    # for i in range(n_iters):
     # while dilate_index > -max_dilate:
     #     print(dilate_index, max_dilate)
-        sq_size = min(int(sq_size*1.05), max_sq_size)
+    # print()
+    # print(mouse_pressed, (pressed_x, pressed_y))
+
+    last_coord = (pressed_x, pressed_y)
+    radar.update()
+    cur_coord = (radar.x, radar.y)
+    # pressed_x, pressed_y = cur_coord
+    # sq_size = init_sq_size
+    # moved = np.linalg.norm(np.array(cur_coord) - np.array(last_coord))
+    while np.linalg.norm(np.array(cur_coord) - np.array(last_coord)) < grid_height // 2:
+        sq_size = min(int(sq_size * 1.1), max_sq_size)
         draw_dilate(sq_size)
         window.update()
-    mouse_pressed = False
+        radar.update()
+        cur_coord = (radar.x, radar.y)
     while dilate_index <= max_erode:
-        draw_erode()
+        draw_erode(sq_size)
         window.update()
     canvas.delete(tk.ALL)
     for i in range(1, n_row):  # horizontal lines
@@ -238,157 +275,186 @@ def on_mouse_press(pressed_x, pressed_y, n_iters=50, sq_size=10):
         canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
 
 
-# def on_mouse_release(event):
-#     global mouse_pressed, dilate_index
-#     global pressed_x, pressed_y
-#     x, y = pressed_x, pressed_y
-#     if mouse_pressed:
-#         mouse_pressed = False
-#         draw_erode(x, y)
-
-
-# 创建主窗口
-window = tk.Tk()
-window.title("Image Revealer")
-window.configure(bg="black")
-
-# 设置画布大小
-# canvas_width = 1086
-# canvas_height = 600
-canvas_width = 1920
-canvas_height = 1080
-
-n_row = 5
-n_col = 9
-canvas_width = int(canvas_width//n_col * n_col)
-canvas_height = int(canvas_height//n_row * n_row)
-print(canvas_width,canvas_height)
-
-# 加载图片 改变图片大小
-# image_path = "pics/calligraphy.JPG"  # 图片路径
-image_path = "pics/xiaoyaoyou_new.jpg"
-image = Image.open(image_path)
-image = image.resize((canvas_width, canvas_height))
-image = np.array(image)
-
-# 将图像转换为PIL Image格式
-image_pil = Image.fromarray(image)
-# 将PIL Image转换为Tkinter Image格式
-photo = ImageTk.PhotoImage(image=image_pil)
-
-# 创建画布
-canvas = tk.Canvas(window, width=canvas_width, height=canvas_height, bg="black")
-canvas.pack()
-# 画5*9网格
-n_row = 5
-n_col = 9
-grid_width = int(canvas_width / n_col)
-grid_height = int(canvas_height / n_row)
-for i in range(1, n_row):  # horizontal lines
-    canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-for j in range(1, n_col):
-    canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
-
-# parameters
-# boundary_size = int(canvas_width)  # 膨胀界限
-# max_sq_size = int(canvas_width // n_col)  # 图片扩大最大尺寸
-max_sq_size = int(canvas_height // 5 * 4)
-init_sq_size = int(max_sq_size//10)
-poly_n = 20
-poly_range = (init_sq_size, max_sq_size)
-mouse_pressed = False
-init_dilate = 5
-max_erode = 10
-
-k_size = 3
-kernel = np.ones((k_size, k_size), np.uint8)
-quad_power = 9
-
-# set different mode param
-max_dilate_ind = [-1, 3, 5, 70]
-mode_table = np.array(
-    [
-        [2, 2, 2, 3, 4, 2, 1, 4, 4],
-        [2, 2, 2, 1, 1, 3, 1, 4, 4],
-        [2, 2, 2, 1, 1, 4, 2, 1, 2],
-        [4, 4, 3, 1, 2, 2, 1, 3, 3],
-        [4, 4, 2, 4, 2, 2, 2, 3, 3]
-    ]
-)
-
-
 def get_mode(x, y):
     return mode_table[int(y // grid_width)][int(x // grid_height)] - 1
     # return min(int((x // (canvas_width // 2)) + 2 * (y // (canvas_height // 2))), 4)
 
 
-# canvas_width = 1086
-# canvas_height = 600
-mouse_pressed = False
-# while(True):
-dilate_index = init_dilate
+# 实地测量
+# lx, ly, rx, ry = 1460, 1100, -1270, 2400
+lx, ly, rx, ry = 1400, 1500, -900, 2300
 
-with open("input.txt") as f:
+# def mapping_position(x, y):
+#     # 0=ly*a+b
+#     # canvas_height = ry*a+b
+#     ay = canvas_height / (ry - ly)
+#     by = 0 - ly * ay
+#     y_new = int(ay * y + by)
+#
+#     # 0 = lx*a+b
+#     # canvas_width = rx*a+b
+#     ax = canvas_width / (rx - lx)
+#     bx = -lx * ax
+#     x_new = int(ax * x + bx)
+#     return x_new, y_new
+
+
+input_points = np.float32([[1500, 1500], [-985, 1300],
+                           [-1231, 2300], [1700, 2300]])
+
+output_points = np.float32([[0, 0], [1920, 0], [1920, 1080], [0, 1080]])
+
+
+def mapping_position(x, y):
+    transform_matrix = cv2.getPerspectiveTransform(input_points, output_points)
+    input_coordinates = np.float32([[x, y]])
+    output_coord = cv2.perspectiveTransform(input_coordinates.reshape(-1, 1, 2), transform_matrix)
+    return output_coord[0][0]
+
+
+# 选择端口
+port_list = list(serial.tools.list_ports.comports())
+print("\nDetected COM ports:")
+for i in range(0, len(port_list)):
+    print("	[ID:{}] {}".format(i, port_list[i]))
+inputerror = True  # will be turned to False when the input is correct
+selected = input("Please select the port which you want to open, ID:")
+if selected.isdigit():
+    if int(selected) < len(port_list):
+        selected_com = port_list[int(selected)]
+        print("\nOpening: {}\n".format(selected_com))
+        inputerror = False
+if inputerror:
+    print("\nInput error! Please only input the ID number in the list above.")
+try:
+    radar = Radar(selected_com[0])
+    # 创建主窗口
+    window = tk.Tk()
+    window.title("Image Revealer")
+    window.configure(bg="black")
+
+    # 设置画布大小
+    # canvas_width = 1086
+    # canvas_height = 600
+    canvas_width = 1920
+    canvas_height = 1080
+
+    n_row = 5
+    n_col = 9
+    canvas_width = int(canvas_width // n_col * n_col)
+    canvas_height = int(canvas_height // n_row * n_row)
+    print(canvas_width, canvas_height)
+
+    # 加载图片 改变图片大小
+    # image_path = "pics/calligraphy.JPG"  # 图片路径
+    image_path = "pics/xiaoyaoyou_new.jpg"
+    image = Image.open(image_path)
+    image = image.resize((canvas_width, canvas_height))
+    image = np.array(image)
+
+    # 将图像转换为PIL Image格式
+    image_pil = Image.fromarray(image)
+    # 将PIL Image转换为Tkinter Image格式
+    photo = ImageTk.PhotoImage(image=image_pil)
+
+    # 创建画布
+    canvas = tk.Canvas(window, width=canvas_width, height=canvas_height, bg="black")
+    canvas.pack()
+    # 画5*9网格
+    n_row = 5
+    n_col = 9
+    grid_width = int(canvas_width / n_col)
+    grid_height = int(canvas_height / n_row)
+    for i in range(1, n_row):  # horizontal lines
+        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
+    for j in range(1, n_col):
+        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+
+    # parameters
+    # boundary_size = int(canvas_width)  # 膨胀界限
+    # max_sq_size = int(canvas_width // n_col)  # 图片扩大最大尺寸
+    # max_sq_size = int(canvas_height // 5 * 4)
+    max_sq_size = canvas_width
+    init_sq_size = int(max_sq_size // 10)
+    poly_n = 20
+    poly_range = (init_sq_size, max_sq_size)
+    mouse_pressed = False
+    init_dilate = 5
+    max_erode = 10
+
+    k_size = 3
+    kernel = np.ones((k_size, k_size), np.uint8)
+    quad_power = 7
+
+    # set different mode param
+    max_dilate_ind = [-1, 3, 5, 450]
+    mode_table = np.array(
+        [
+            [2, 2, 2, 3, 4, 2, 1, 4, 4],
+            [2, 2, 2, 1, 1, 3, 1, 4, 4],
+            [2, 2, 2, 1, 1, 4, 2, 1, 2],
+            [4, 4, 3, 1, 2, 2, 1, 3, 3],
+            [4, 4, 2, 4, 2, 2, 2, 3, 3]
+        ]
+    )
+
+    for i in range(1, n_row):  # horizontal lines
+        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
+    for j in range(1, n_col):
+        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+
+    # new: ver5.3
+    mouse_pressed = False
+    dilate_index = init_dilate
+    print("Radar preparing...")
+    for i in range(10):
+        radar.update()
+        # print(radar.x, radar.y)
+    print("Done!")
     coord_list = []
-    for line in f:
-        coord_list.append((tuple([int(a) for a in line.rstrip('\n').split(" ")])))
+    while (1):
+        radar.update()
+        print(radar.x, radar.y)
+        # pressed_x, pressed_y = radar.x, radar.y
+        is_in_domain = cv2.pointPolygonTest(input_points,
+                                            tuple([radar.x, radar.y]), False)
+        is_in_range = cv2.pointPolygonTest(output_points,
+                                           mapping_position(radar.x, radar.y), False)
+        if is_in_domain <= 0 or is_in_range <= 0:
+            # while not lx <= radar.x < rx and ly<= radar.y < ry:
+            #     radar.update()
+            # pressed_x, pressed_y = radar.x, radar.y
+            # print(pressed_x, pressed_y)
+            radar.update()
+        else:
+            pressed_x, pressed_y = mapping_position(radar.x, radar.y)
+            sq_size = init_sq_size
+            on_mouse_press(pressed_x, pressed_y, sq_size=init_sq_size)
+            canvas.delete(tk.ALL)
 
-# coord_list = [
-#     (400, 200),  # 1, 中间
-#     (100, 100),  # 2 左上
-#     (1000, 500),  # 3 右下
-#     (1000, 150)  # 4, 右上
-# ]
-# for coord in coord_list:
-#     pressed_x, pressed_y = coord
-#     mouse_pressed = True
-#     # 现在开始1）裁剪图像 2）使用sub_image内的相对坐标
-#     x = max(0, pressed_x - max_sq_size // 2)
-#     y = max(0, pressed_y - max_sq_size // 2)
-#     width = min(max_sq_size, canvas_width - x)
-#     height = min(max_sq_size, canvas_height - y)
-#     sub_image = image_pil.crop((x, y, x + width, y + height))
+        for i in range(1, n_row):  # horizontal lines
+            canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
+        for j in range(1, n_col):
+            canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+    # 运行主循环
+    window.mainloop()
+except serial.SerialException as e:
+    print("Serial error: ", e)
+
+# with open("input2.txt") as f:
+#     coord_list = []
+#     for line in f:
+#         coord_list.append((tuple([int(a) for a in line.rstrip('\n').split(" ")])))
+
+
+# def tmp_get():
+#     global coord_list
+#     return coord_list.pop(0)
+
 #
-#     # 根据坐标获取mode
-#     mode = get_mode(pressed_x, pressed_y)
-#     max_dilate = max_dilate_ind[mode]
-#
-#     sub_image = np.array(sub_image)
-#     sub_image_center = (sub_image.shape[0] // 2, sub_image.shape[1] // 2)
-#     old_polygon = Polygon_112(n=poly_n,
-#                               center=sub_image_center,
-#                               size=max_sq_size)
-#     cropped_subimage = crop_polygon(np.array(sub_image), old_polygon)
-#
+# while coord_list:
+#     pressed_x, pressed_y = coord_list[0]
+#     print(pressed_x, pressed_y)
 #     sq_size = init_sq_size
-#     n_iters = 20
-#
-#     for i in range(n_iters):
-#         # sq_size = sq_size + 10
-#         sq_size = min(sq_size + 10, max_sq_size)
-#         draw_dilate(sq_size)
-#         window.update()
-#     mouse_pressed = False
-#     for i in range(n_iters):
-#         draw_erode()
-#         window.update()
-#
+#     on_mouse_press(pressed_x, pressed_y, sq_size=init_sq_size)
 #     canvas.delete(tk.ALL)
-#     for i in range(1, n_row):  # horizontal lines
-#         canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-#     for j in range(1, n_col):
-#         canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
-
-for coord in coord_list:
-    pressed_x, pressed_y = coord
-    # print(coord)
-    # sq_size = init_sq_size
-    on_mouse_press(pressed_x, pressed_y, n_iters=50, sq_size=init_sq_size)
-    canvas.delete(tk.ALL)
-
-for i in range(1, n_row):  # horizontal lines
-    canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-for j in range(1, n_col):
-    canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
-# 运行主循环
-window.mainloop()

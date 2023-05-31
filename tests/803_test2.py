@@ -1,5 +1,5 @@
 import cv2
-from quad_tree_csdn_new import *
+from prev_vers.ver_5.quad_tree_csdn_new import *
 
 image_path = "../pics/803step.jpg"  # 替换为你的图片路径
 image = cv2.imread(image_path)
