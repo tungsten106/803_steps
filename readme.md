@@ -7,7 +7,7 @@
 2. 安装需要的包
 
    ```python
-   pip install opencv-python	# opencv
+   pip install opencv-python	   # opencv
    pip install tk						# tkinter
    pip install Pillow				# pillow
    pip install numpy					# numpy
