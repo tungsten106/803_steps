@@ -1,6 +1,9 @@
+import time
+
 from polygons_1_1_2 import *
 from quad_tree_csdn_59 import *
 import cv2
+from datetime import datetime
 
 """
 version5.1
@@ -13,7 +16,7 @@ version5.1
 # TODO: 上传github
 
 
-def draw_dilate(sq_size):
+def draw_dilate(sq_size, save=False):
     global dilate_index, mouse_pressed, old_polygon, mask
     global cropped_subimage, bounded_img, new_subimage
     global max_dilate, new_polygon, cur_sq_size
@@ -61,14 +64,14 @@ def draw_dilate(sq_size):
     else:
         if dilate_index >= 0:
             dilated_img = dilate3(bounded_img, dilate_index, 128 - 2 * dilate_index,
-                                  step=sq_size // 10)
+                                  step=init_sq_size // 10)
             dilate_index -= 1
         else:
             # print(dilate_index, max_dilate)
             dilate_index = max(0 - max_dilate, dilate_index)
             dilated_img = cv2.dilate(bounded_img, kernel, iterations=abs(dilate_index))
-            dilate_index -= 3
-    # print(dilate_index)
+            dilate_index -= 10
+    print(dilate_index)
     # print(dilated_img.shape)
 
     # print(dilated_img.shape)
@@ -88,12 +91,12 @@ def draw_dilate(sq_size):
     w_b = boundary_size
     h_b = boundary_size
     if get_mode(pressed_x, pressed_y) == 3:
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x_b, y_b, x_b + w_b, y_b + h_b),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
     else:
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x, y, x + width, y + height),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
@@ -101,6 +104,10 @@ def draw_dilate(sq_size):
     sub_photo = ImageTk.PhotoImage(Image.fromarray(screenshot))
 
     canvas.create_image(0, 0, anchor=tk.NW, image=sub_photo, tags="revealed_image")
+    if save:
+        # img = Image.open(save_path)  # 打开图片
+        Image.fromarray(screenshot).save(f"saved_pics/{get_mode(pressed_x,pressed_y)+1}_{datetime.now().strftime('%H_%M_%S_%f')}.jpg")  # 将图片保存为1.jpg
+
     for i in range(1, n_row):  # horizontal lines
         canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
     for j in range(1, n_col):
@@ -116,7 +123,7 @@ def draw_dilate(sq_size):
     # return
 
 
-def draw_erode(sq_size):
+def draw_erode(sq_size, save=False):
     global dilate_index, mouse_pressed, new_subimage
     global cur_sq_size, new_polygon
     global pressed_x, pressed_y, bounded_img
@@ -138,7 +145,7 @@ def draw_erode(sq_size):
     # sub_image = dilate2(sub_image, abs(dilate_index), 128 + 2 * dilate_index)
     if dilate_index < 0:
         # 更新参数
-        dilate_index += 3
+        dilate_index += 10
         eroded_subimage = cv2.dilate(bounded_img, kernel, iterations=abs(dilate_index))
 
     else:
@@ -161,12 +168,12 @@ def draw_erode(sq_size):
         y_b = pressed_y - boundary_size // 2
         w_b = boundary_size
         h_b = boundary_size
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x_b, y_b, x_b + w_b, y_b + h_b),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
     else:
-        screenshot = get_quad_grid(bg_img, min_sq=max_sq_size / (2 ** (quad_power)),
+        screenshot = get_quad_grid(bg_img, min_sq=init_sq_size / (2 ** (quad_power)),
                                    subimage_coord=(x, y, x + width, y + height),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
@@ -175,6 +182,10 @@ def draw_erode(sq_size):
 
     # sub_photo = ImageTk.PhotoImage(Image.fromarray(eroded_subimage))
     canvas.create_image(0, 0, anchor=tk.NW, image=sub_photo, tags="revealed_image")
+    if save:
+        # img = Image.open(save_path)  # 打开图片
+        Image.fromarray(screenshot).save(f"saved_pics/{get_mode(pressed_x,pressed_y)+1}_{datetime.now().strftime('%H_%M_%S_%f')}.jpg")  # 将图片保存为1.jpg
+
     for i in range(1, n_row):  # horizontal lines
         canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
     for j in range(1, n_col):
@@ -196,11 +207,11 @@ def draw_erode(sq_size):
 
 def on_mouse_press(pressed_x, pressed_y,
                    # n_iters=50,
-                   sq_size=10, mouse_pressed=True):
+                   sq_size=10,save=False):
     global dilate_index, cropped_subimage
     global old_polygon, bounded_img
     # global pressed_x, pressed_y
-    global max_dilate, coord_list
+    global max_dilate, coord_list, last_coord
     dilate_index = init_dilate
     # pressed_x, pressed_y = event.x, event.y
 
@@ -227,14 +238,20 @@ def on_mouse_press(pressed_x, pressed_y,
     # while dilate_index > -max_dilate:
     #     print(dilate_index, max_dilate)
     # print()
-    print(mouse_pressed, (pressed_x, pressed_y))
-    while mouse_pressed:
-        sq_size = min(int(sq_size * 1.05), max_sq_size)
-        draw_dilate(sq_size)
+    # print(mouse_pressed, (pressed_x, pressed_y))
+
+    last_coord = (pressed_x, pressed_y)
+    cur_coord = coord_list[0]
+    # pressed_x, pressed_y = cur_coord
+    # sq_size = init_sq_size
+    # moved = np.linalg.norm(np.array(cur_coord) - np.array(last_coord))
+    while np.linalg.norm(np.array(cur_coord) - np.array(last_coord)) < grid_height//2:
+        sq_size = min(int(sq_size * 1.1), max_sq_size)
+        draw_dilate(sq_size, save)
         window.update()
-    mouse_pressed = False
+        cur_coord = tmp_get()
     while dilate_index <= max_erode:
-        draw_erode(sq_size)
+        draw_erode(sq_size, save)
         window.update()
     canvas.delete(tk.ALL)
     for i in range(1, n_row):  # horizontal lines
@@ -297,7 +314,8 @@ for j in range(1, n_col):
 # parameters
 # boundary_size = int(canvas_width)  # 膨胀界限
 # max_sq_size = int(canvas_width // n_col)  # 图片扩大最大尺寸
-max_sq_size = int(canvas_height // 5 * 4)
+# max_sq_size = int(canvas_height // 5 * 4)
+max_sq_size = canvas_width
 init_sq_size = int(max_sq_size // 10)
 poly_n = 20
 poly_range = (init_sq_size, max_sq_size)
@@ -307,10 +325,10 @@ max_erode = 10
 
 k_size = 3
 kernel = np.ones((k_size, k_size), np.uint8)
-quad_power = 9
+quad_power = 7
 
 # set different mode param
-max_dilate_ind = [-1, 3, 5, 70]
+max_dilate_ind = [-1, 3, 5, 450]
 mode_table = np.array(
     [
         [2, 2, 2, 3, 4, 2, 1, 4, 4],
@@ -347,26 +365,34 @@ with open("input_531.txt") as f:
 #     canvas.delete(tk.ALL)
 
 # new: ver5.3
-last_coord = coord_list[0]
+# last_coord = coord_list[0]
 mouse_pressed = False
+def tmp_get():
+    global coord_list
+    return coord_list.pop(0)
 
-for i in range(1, len(coord_list)):
-    cur_coord = coord_list[i]
-    # pressed_x, pressed_y = cur_coord
-    # sq_size = init_sq_size
-    moved = np.linalg.norm(np.array(cur_coord) - np.array(last_coord))
-    if moved <= grid_height//2:
-        mouse_pressed = True
+# for i in range(1, len(coord_list)):
+#     cur_coord = coord_list[i]
+#     # pressed_x, pressed_y = cur_coord
+#     # sq_size = init_sq_size
+#     moved = np.linalg.norm(np.array(cur_coord) - np.array(last_coord))
+#     if moved <= grid_height//2:
+#         mouse_pressed = True
+#
+#     else:
+#         mouse_pressed = False
+#         last_coord = cur_coord
+#     pressed_x, pressed_y = last_coord
+#     on_mouse_press(pressed_x, pressed_y, sq_size=init_sq_size, mouse_pressed=mouse_pressed)
+#     canvas.delete(tk.ALL)
 
-    else:
-        mouse_pressed = False
-        last_coord = cur_coord
-    pressed_x, pressed_y = last_coord
-    on_mouse_press(pressed_x, pressed_y, sq_size=init_sq_size, mouse_pressed=mouse_pressed)
+while coord_list:
+    pressed_x, pressed_y = coord_list[0]
+    print(pressed_x, pressed_y)
+    sq_size = init_sq_size
+    on_mouse_press(pressed_x, pressed_y, sq_size=init_sq_size,
+                   save=True)
     canvas.delete(tk.ALL)
-
-
-
 
 for i in range(1, n_row):  # horizontal lines
     canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
