@@ -3,6 +3,41 @@ from PIL import Image, ImageTk
 import numpy as np
 import cv2
 
+# input_points = np.float32([[1500, 1500], [-985, 1300],
+#                            [-1231, 2300], [1700, 2300]])
+# input_points = np.float32([[1550,1340],
+#                            [-850,1250],
+#                            [-1030,2260],
+#                            [1600,2300]])
+input_points = np.float32([[1136,1147],
+                           [-1227,1250],
+                           [-1345,2400],
+                           [1300,2430]])
+
+output_points = np.float32([[0, 0], [1917-1, 0], [1917-1, 1080-1], [0, 1080-1]])
+
+
+def mapping_position(x, y):
+    transform_matrix = cv2.getPerspectiveTransform(input_points, output_points)
+    input_coordinates = np.float32([[x, y]])
+    output_coord = cv2.perspectiveTransform(input_coordinates.reshape(-1, 1, 2), transform_matrix)
+    return output_coord[0][0]
+
+
+def check_loc_domain(last_coord):
+    x, y= last_coord
+    is_in_domain = cv2.pointPolygonTest(input_points,
+                                        (x, y), False)
+    return is_in_domain > 0
+
+def check_loc_range(cur_coord):
+    x, y = cur_coord
+    is_in_range =cv2.pointPolygonTest(output_points,
+                                      (x, y), False)
+    return is_in_range > 0
+
+
+
 
 def crop_polygon(image, polygon):
     # 创建黑色背景图像
@@ -33,16 +68,16 @@ def dilate3(img, size, threshold=128, step=3):
     """
     for x in range(0, img.shape[0], step):
         for y in range(0, img.shape[1], step):
-            xlim1 = max(x+step//2 - size, 0)
-            xlim2 = min(x+step//2 + size + 1, img.shape[0])
-            ylim1 = max(y+step//2 - size, 0)
-            ylim2 = min(y+step//2 + size + 1, img.shape[1])
+            xlim1 = max(x + step // 2 - size, 0)
+            xlim2 = min(x + step // 2 + size + 1, img.shape[0])
+            ylim1 = max(y + step // 2 - size, 0)
+            ylim2 = min(y + step // 2 + size + 1, img.shape[1])
             avg = np.mean(img[xlim1:xlim2, ylim1:ylim2])
 
             if avg > threshold:
-                img[x:x+step, y:y+step] = 255
+                img[x:x + step, y:y + step] = 255
             else:
-                img[x:x+step, y:y+step] = 0
+                img[x:x + step, y:y + step] = 0
     return img
 
 

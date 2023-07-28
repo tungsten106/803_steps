@@ -8,57 +8,64 @@ import serial.tools.list_ports
 from Xen202TT01 import Radar
 
 """
-version final!!
+version final!! WORKED with interactive device!
 combine programme & position signal input script
 version5.3.1+Xen202TT01
 """
 
-
 # 雷达设定（by林彦
-# serial_port = "COM31"
-#
-# pack_len = 30
-# pack_head = b'\xAA\xFF\03\00'
-# cmd_multi = b'\xFD\xFC\xFB\xFA\x02\x00\x90\x00\x04\x03\x02\x01'
-# cmd_single = b'\xFD\xFC\xFB\xFA\x02\x00\x80\x00\x04\x03\x02\x01'
-#
-# reply_multi = b'\xFD\xFC\xFB\xFA\x04\x00\x90\x01\x01\x00\x04\x03\x02\x01'
-# reply_single = b'\xFD\xFC\xFB\xFA\x04\x00\x80\x01\x01\x00\x04\x03\x02\x01'
+serial_port = "COM31"
+
+pack_len = 30
+pack_head = b'\xAA\xFF\03\00'
+cmd_multi = b'\xFD\xFC\xFB\xFA\x02\x00\x90\x00\x04\x03\x02\x01'
+cmd_single = b'\xFD\xFC\xFB\xFA\x02\x00\x80\x00\x04\x03\x02\x01'
+
+reply_multi = b'\xFD\xFC\xFB\xFA\x04\x00\x90\x01\x01\x00\x04\x03\x02\x01'
+reply_single = b'\xFD\xFC\xFB\xFA\x04\x00\x80\x01\x01\x00\x04\x03\x02\x01'
 
 
-# def on_mouse_release(event):
-#     global mouse_pressed, dilate_index
-#     global pressed_x, pressed_y
-#     x, y = pressed_x, pressed_y
-#     if mouse_pressed:
-#         mouse_pressed = False
-#         draw_erode(x, y)
+def gen_bg_img(image):
+    bg_img = Image.new("RGB", (int(canvas_height // 5 * 16), int(canvas_height // 5 * 8)), "black")
+    bg_img.paste(Image.fromarray(image),
+                 (int(pressed_x - image.shape[0] // 2),
+                  int(pressed_y - image.shape[1] // 2)))  # 将b贴到a的坐标为（0,0）的位置，以图片左上角为坐标原点，这里说的是原点的移动
+    bg_img = np.array(bg_img)
+    # print(bg.img)
+    bg_img = cv2.cvtColor(bg_img, cv2.COLOR_BGR2GRAY)  # 转换为灰度图像
+    return bg_img
+
+
+def gen_grid(canvas):
+    for i in range(1, n_row):  # horizontal lines
+        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
+    for j in range(1, n_col):
+        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+    return
 
 
 # 特效函数s
 def draw_dilate(sq_size):
+    '''
+    add dilate effect to original work
+    :param sq_size: side of square cropped from original image
+    :return: None
+    '''
     global dilate_index, mouse_pressed, old_polygon, mask
     global cropped_subimage, bounded_img, new_subimage
     global max_dilate, new_polygon, cur_sq_size
 
     cur_sq_size = sq_size
-    # if not mouse_pressed:
-    #     return
 
     # 计算要显示的图像位置和大小
-    # print(sq_size)
-    # x = max(0, pressed_x - sq_size // 2)
-    # y = max(0, pressed_y - sq_size // 2)
-    # width = min(sq_size, canvas_width - x)
-    # height = min(sq_size, canvas_height - y)
     x = pressed_x - sq_size // 2
     y = pressed_y - sq_size // 2
     width = sq_size
     height = sq_size
     new_subimage = image_pil.crop((x, y, x + width, y + height))
-    # new_subimage.show()
     new_subimage = np.array(new_subimage)
 
+    # crop original image
     new_polygon = Polygon_112(n=poly_n,
                               size=sq_size,
                               center=(width // 2, height // 2),
@@ -66,18 +73,18 @@ def draw_dilate(sq_size):
                               distances=old_polygon.distances / max_sq_size * sq_size)
     cropped_subimage = crop_polygon(new_subimage, new_polygon)
 
+    # add a black boundary to make stronger effect
     boundary_size = int(sq_size * 1.5)
     bounded_img = Image.new("RGB", (boundary_size, boundary_size), "black")
     new_x, new_y = int(boundary_size // 2 - (sq_size // 2)), int(boundary_size // 2 - (sq_size // 2))
     bounded_img.paste(Image.fromarray(cropped_subimage),
                       (new_x, new_y))
-    # bounded_img.show()
 
     bounded_img = np.array(bounded_img)
     bounded_img = cv2.cvtColor(bounded_img, cv2.COLOR_BGR2GRAY)  # 转换为灰度图像  # 裁剪后的原图
-    # print("dilate bounded", bounded_img.shape)
-    # Image.fromarray(bounded_img).show()
-    if max_dilate < 0:  # case1
+
+    # start dilate by different mode (1-4)
+    if max_dilate < 0:  # mode
         dilate_index = max(abs(max_dilate), dilate_index)
         dilated_img = cv2.erode(bounded_img, kernel, iterations=dilate_index)
         dilate_index -= 1
@@ -90,20 +97,9 @@ def draw_dilate(sq_size):
             # print(dilate_index, max_dilate)
             dilate_index = max(0 - max_dilate, dilate_index)
             dilated_img = cv2.dilate(bounded_img, kernel, iterations=abs(dilate_index))
-            dilate_index -= 10
-    print(dilate_index)
-    # print(dilated_img.shape)
+            dilate_index -= cv2_dilate_step
 
-    # print(dilated_img.shape)
-    bg_img = Image.new("RGB", (int(canvas_height // 5 * 16), int(canvas_height // 5 * 8)), "black")
-    bg_img.paste(Image.fromarray(dilated_img),
-                 (int(pressed_x - dilated_img.shape[0] // 2),
-                  int(pressed_y - dilated_img.shape[1] // 2)))  # 将b贴到a的坐标为（0,0）的位置，以图片左上角为坐标原点，这里说的是原点的移动
-    bg_img = np.array(bg_img)
-    # print(bg.img)
-    bg_img = cv2.cvtColor(bg_img, cv2.COLOR_BGR2GRAY)  # 转换为灰度图像
-
-    # print(f"dilate:{(x, y, x + width, y + height)}")
+    bg_img = gen_bg_img(dilated_img)
 
     # find boundary locs
     x_b = pressed_x - boundary_size // 2
@@ -124,19 +120,11 @@ def draw_dilate(sq_size):
     sub_photo = ImageTk.PhotoImage(Image.fromarray(screenshot))
 
     canvas.create_image(0, 0, anchor=tk.NW, image=sub_photo, tags="revealed_image")
-    for i in range(1, n_row):  # horizontal lines
-        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-    for j in range(1, n_col):
-        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+    gen_grid(canvas)
 
     # 保留对sub_photo的引用
     canvas.sub_photo = sub_photo
-    # if mouse_pressed:
-    #     window.update()
-    #     cur_sq_size = sq_size + 10
-    #     window.after(20, lambda: draw_dilate(mouse_x, mouse_y, min(cur_sq_size, max_sq_size)))
-    # Image.fromarray(bounded_img).show()
-    # return
+    return
 
 
 def draw_erode(sq_size):
@@ -161,21 +149,13 @@ def draw_erode(sq_size):
     # sub_image = dilate2(sub_image, abs(dilate_index), 128 + 2 * dilate_index)
     if dilate_index < 0:
         # 更新参数
-        dilate_index += 10
+        dilate_index += cv2_dilate_step
         eroded_subimage = cv2.dilate(bounded_img, kernel, iterations=abs(dilate_index))
-
     else:
         dilate_index += 1
         eroded_subimage = cv2.erode(bounded_img, kernel, iterations=dilate_index)
 
-    # dilate_index = min(20, dilate_index)
-    bg_img = Image.new("RGB", (int(canvas_height // 5 * 16), int(canvas_height // 5 * 8)), "black")
-    bg_img.paste(Image.fromarray(eroded_subimage),
-                 (int(pressed_x - eroded_subimage.shape[0] // 2),
-                  int(pressed_y - eroded_subimage.shape[0] // 2)))  # 将b贴到a的坐标为（0,0）的位置，以图片左上角为坐标原点，这里说的是原点的移动
-    bg_img = np.array(bg_img)
-    # print(bg.img)
-    bg_img = cv2.cvtColor(bg_img, cv2.COLOR_BGR2GRAY)  # 转换为灰度图像
+    bg_img = gen_bg_img(eroded_subimage)
 
     # print(f"erode:{(x, y, x + width, y + height)}")
     boundary_size = int(sq_size * 1.5)
@@ -193,38 +173,23 @@ def draw_erode(sq_size):
                                    subimage_coord=(x, y, x + width, y + height),
                                    canvas_width=canvas_width,
                                    canvas_height=canvas_height)
-    # Image.fromarray(screenshot).show()
     sub_photo = ImageTk.PhotoImage(Image.fromarray(screenshot))
 
-    # sub_photo = ImageTk.PhotoImage(Image.fromarray(eroded_subimage))
     canvas.create_image(0, 0, anchor=tk.NW, image=sub_photo, tags="revealed_image")
-    for i in range(1, n_row):  # horizontal lines
-        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-    for j in range(1, n_col):
-        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+    gen_grid(canvas)
 
     # 保留对sub_photo的引用
     canvas.sub_photo = sub_photo
-    # if not mouse_pressed and dilate_index <= max_erode:
-    #     window.update()
-    #     window.after(20, lambda: draw_erode(pressed_x, pressed_y))
-    # else:
-    #     canvas.delete(tk.ALL)
-    #     for i in range(1, n_row):  # horizontal lines
-    #         canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-    #     for j in range(1, n_col):
-    #         canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
     return
 
 
 # 鼠标函数s
 def on_mouse_press(pressed_x, pressed_y,
-                   sq_size=10, mouse_pressed=True):
+                   sq_size=10):
     global dilate_index, cropped_subimage
     global old_polygon, bounded_img
     # global pressed_x, pressed_y
     global max_dilate, coord_list, last_coord
-    global radar
     dilate_index = init_dilate
     # pressed_x, pressed_y = event.x, event.y
 
@@ -237,6 +202,10 @@ def on_mouse_press(pressed_x, pressed_y,
 
     # 根据坐标获取mode
     mode = get_mode(pressed_x, pressed_y)
+    if not 0 <= mode < 4:
+        return
+    # if not mode:
+    #     return
     max_dilate = max_dilate_ind[mode]
     # 为了让多边形的形状固定 先生成一个固定的“大多边形”
     sub_image = np.array(sub_image)
@@ -255,16 +224,27 @@ def on_mouse_press(pressed_x, pressed_y,
 
     last_coord = (pressed_x, pressed_y)
     radar.update()
-    cur_coord = (radar.x, radar.y)
+    cur_coord = mapping_position(radar.x, radar.y)
     # pressed_x, pressed_y = cur_coord
     # sq_size = init_sq_size
     # moved = np.linalg.norm(np.array(cur_coord) - np.array(last_coord))
-    while np.linalg.norm(np.array(cur_coord) - np.array(last_coord)) < grid_height // 2:
+    # is_in_domain = cv2.pointPolygonTest(input_points,
+    #                                     tuple([radar.x, radar.y]), False)
+    # pressed_x, pressed_y = mapping_position(radar.x, radar.y)
+    # is_in_range =cv2.pointPolygonTest(output_points,
+    #                                   (pressed_x, pressed_y), False)
+    # for i in range(10):
+    #     sq_size = min(int(sq_size * 1.1), max_sq_size)
+    #     draw_dilate(sq_size)
+    #     window.update()
+    while check_loc_range(last_coord) and \
+            check_loc_range(cur_coord) and \
+            (np.linalg.norm(np.array(cur_coord) - np.array(last_coord)) <= 1.5 * grid_height):
         sq_size = min(int(sq_size * 1.1), max_sq_size)
         draw_dilate(sq_size)
         window.update()
         radar.update()
-        cur_coord = (radar.x, radar.y)
+        cur_coord = mapping_position(radar.x, radar.y)
     while dilate_index <= max_erode:
         draw_erode(sq_size)
         window.update()
@@ -276,40 +256,14 @@ def on_mouse_press(pressed_x, pressed_y,
 
 
 def get_mode(x, y):
-    return mode_table[int(y // grid_width)][int(x // grid_height)] - 1
-    # return min(int((x // (canvas_width // 2)) + 2 * (y // (canvas_height // 2))), 4)
-
-
-# 实地测量
-# lx, ly, rx, ry = 1460, 1100, -1270, 2400
-lx, ly, rx, ry = 1400, 1500, -900, 2300
-
-# def mapping_position(x, y):
-#     # 0=ly*a+b
-#     # canvas_height = ry*a+b
-#     ay = canvas_height / (ry - ly)
-#     by = 0 - ly * ay
-#     y_new = int(ay * y + by)
-#
-#     # 0 = lx*a+b
-#     # canvas_width = rx*a+b
-#     ax = canvas_width / (rx - lx)
-#     bx = -lx * ax
-#     x_new = int(ax * x + bx)
-#     return x_new, y_new
-
-
-input_points = np.float32([[1500, 1500], [-985, 1300],
-                           [-1231, 2300], [1700, 2300]])
-
-output_points = np.float32([[0, 0], [1920, 0], [1920, 1080], [0, 1080]])
-
-
-def mapping_position(x, y):
-    transform_matrix = cv2.getPerspectiveTransform(input_points, output_points)
-    input_coordinates = np.float32([[x, y]])
-    output_coord = cv2.perspectiveTransform(input_coordinates.reshape(-1, 1, 2), transform_matrix)
-    return output_coord[0][0]
+    try:
+        # output = mode_table[int(y // grid_width)][int(x // grid_height)] - 1
+        output = mode_table[int(y // grid_height)][int(x // grid_width)] - 1
+        print(output)
+        return output
+    # return mode_table[int(y // grid_width)][int(x // grid_height)] - 1
+    except IndexError:
+        print("error:", [int(y // grid_height), int(x // grid_width)])
 
 
 # 选择端口
@@ -326,120 +280,124 @@ if selected.isdigit():
         inputerror = False
 if inputerror:
     print("\nInput error! Please only input the ID number in the list above.")
-try:
-    radar = Radar(selected_com[0])
-    # 创建主窗口
-    window = tk.Tk()
-    window.title("Image Revealer")
-    window.configure(bg="black")
+    exit()
 
-    # 设置画布大小
-    # canvas_width = 1086
-    # canvas_height = 600
-    canvas_width = 1920
-    canvas_height = 1080
+radar = Radar(selected_com[0])
+# 创建主窗口
+window = tk.Tk()
+window.title("Image Revealer")
+window.configure(bg="black")
 
-    n_row = 5
-    n_col = 9
-    canvas_width = int(canvas_width // n_col * n_col)
-    canvas_height = int(canvas_height // n_row * n_row)
-    print(canvas_width, canvas_height)
+# 设置画布大小
+canvas_width = 1086
+canvas_height = 600
+# canvas_width = 1920
+# canvas_height = 1080
 
-    # 加载图片 改变图片大小
-    # image_path = "pics/calligraphy.JPG"  # 图片路径
-    image_path = "pics/xiaoyaoyou_new.jpg"
-    image = Image.open(image_path)
-    image = image.resize((canvas_width, canvas_height))
-    image = np.array(image)
+n_row = 5
+n_col = 9
+canvas_width = int(canvas_width // n_col * n_col)
+canvas_height = int(canvas_height // n_row * n_row)
+# print(canvas_width, canvas_height)
 
-    # 将图像转换为PIL Image格式
-    image_pil = Image.fromarray(image)
-    # 将PIL Image转换为Tkinter Image格式
-    photo = ImageTk.PhotoImage(image=image_pil)
+# 加载图片 改变图片大小
+image_path = "pics/calligraphy.JPG"  # 图片路径
+# image_path = "../../Downloads/xiaoyaoyou_ver_5_new/pics/xiaoyaoyou_new.jpg"
+image = Image.open(image_path)
+image = image.resize((canvas_width, canvas_height))
+image = np.array(image)
 
-    # 创建画布
-    canvas = tk.Canvas(window, width=canvas_width, height=canvas_height, bg="black")
-    canvas.pack()
-    # 画5*9网格
-    n_row = 5
-    n_col = 9
-    grid_width = int(canvas_width / n_col)
-    grid_height = int(canvas_height / n_row)
-    for i in range(1, n_row):  # horizontal lines
-        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-    for j in range(1, n_col):
-        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+# 将图像转换为PIL Image格式
+image_pil = Image.fromarray(image)
+# 将PIL Image转换为Tkinter Image格式
+photo = ImageTk.PhotoImage(image=image_pil)
 
-    # parameters
-    # boundary_size = int(canvas_width)  # 膨胀界限
-    # max_sq_size = int(canvas_width // n_col)  # 图片扩大最大尺寸
-    # max_sq_size = int(canvas_height // 5 * 4)
-    max_sq_size = canvas_width
-    init_sq_size = int(max_sq_size // 10)
-    poly_n = 20
-    poly_range = (init_sq_size, max_sq_size)
-    mouse_pressed = False
-    init_dilate = 5
-    max_erode = 10
+# 创建画布
+canvas = tk.Canvas(window, width=canvas_width, height=canvas_height, bg="black")
+canvas.pack()
+# 画5*9网格
+n_row = 5
+n_col = 9
+grid_width = int(canvas_width / n_col)
+grid_height = int(canvas_height / n_row)
+for i in range(1, n_row):  # horizontal lines
+    canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
+for j in range(1, n_col):
+    canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
 
-    k_size = 3
-    kernel = np.ones((k_size, k_size), np.uint8)
-    quad_power = 7
+# parameters
+# boundary_size = int(canvas_width)  # 膨胀界限
+# max_sq_size = int(canvas_width // n_col)  # 图片扩大最大尺寸
+# max_sq_size = int(canvas_height // 5 * 4)
+max_sq_size = canvas_height
+init_sq_size = int(max_sq_size // 10)
+poly_n = 20
+poly_range = (init_sq_size, max_sq_size)
+mouse_pressed = False
+init_dilate = 5
+max_erode = 10
+cv2_dilate_step = 5
 
-    # set different mode param
-    max_dilate_ind = [-1, 3, 5, 450]
-    mode_table = np.array(
-        [
-            [2, 2, 2, 3, 4, 2, 1, 4, 4],
-            [2, 2, 2, 1, 1, 3, 1, 4, 4],
-            [2, 2, 2, 1, 1, 4, 2, 1, 2],
-            [4, 4, 3, 1, 2, 2, 1, 3, 3],
-            [4, 4, 2, 4, 2, 2, 2, 3, 3]
-        ]
-    )
+k_size = 3
+kernel = np.ones((k_size, k_size), np.uint8)
+quad_power = 7
 
-    for i in range(1, n_row):  # horizontal lines
-        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-    for j in range(1, n_col):
-        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+# set different mode param
+max_dilate_ind = [-1, 3, 5, 450]
+mode_table = np.array(
+    [
+        [2, 2, 2, 3, 4, 2, 1, 4, 4],
+        [2, 2, 2, 1, 1, 3, 1, 4, 4],
+        [2, 2, 2, 1, 1, 4, 2, 1, 2],
+        [4, 4, 3, 1, 2, 2, 1, 3, 3],
+        [4, 4, 2, 4, 2, 2, 2, 3, 3]
+    ]
+)
 
-    # new: ver5.3
-    mouse_pressed = False
-    dilate_index = init_dilate
-    print("Radar preparing...")
-    for i in range(10):
-        radar.update()
-        # print(radar.x, radar.y)
-    print("Done!")
-    coord_list = []
-    while (1):
-        radar.update()
-        print(radar.x, radar.y)
+for i in range(1, n_row):  # horizontal lines
+    canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
+for j in range(1, n_col):
+    canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+window.update()
+# new: ver5.3
+mouse_pressed = False
+dilate_index = init_dilate
+# print("Radar preparing...")
+# for i in range(10):
+#     radar.update()
+#     print(radar.x, radar.y)
+# print("Done!")
+while True:
+    radar.update()
+
+    # pressed_x, pressed_y = radar.x, radar.y
+    print(radar.x, radar.y)
+    is_in_domain = cv2.pointPolygonTest(input_points,
+                                        tuple([radar.x, radar.y]), False)
+    pressed_x, pressed_y = mapping_position(radar.x, radar.y)
+    is_in_range = cv2.pointPolygonTest(output_points,
+                                       (pressed_x, pressed_y), False)
+    if is_in_domain <= 0 or is_in_range <= 0:
+        # while not lx <= radar.x < rx and ly<= radar.y < ry:
+        #     radar.update()
         # pressed_x, pressed_y = radar.x, radar.y
-        is_in_domain = cv2.pointPolygonTest(input_points,
-                                            tuple([radar.x, radar.y]), False)
-        is_in_range = cv2.pointPolygonTest(output_points,
-                                           mapping_position(radar.x, radar.y), False)
-        if is_in_domain <= 0 or is_in_range <= 0:
-            # while not lx <= radar.x < rx and ly<= radar.y < ry:
-            #     radar.update()
-            # pressed_x, pressed_y = radar.x, radar.y
-            # print(pressed_x, pressed_y)
-            radar.update()
-        else:
-            pressed_x, pressed_y = mapping_position(radar.x, radar.y)
-            sq_size = init_sq_size
-            on_mouse_press(pressed_x, pressed_y, sq_size=init_sq_size)
-            canvas.delete(tk.ALL)
+        # print(pressed_x, pressed_y)
+        radar.update()
+    else:
+        # print(mapping_position(radar.x, radar.y))
+        # pressed_x, pressed_y = mapping_position(radar.x, radar.y)
+        sq_size = init_sq_size
+        on_mouse_press(pressed_x, pressed_y, sq_size=init_sq_size)
 
-        for i in range(1, n_row):  # horizontal lines
-            canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
-        for j in range(1, n_col):
-            canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
-    # 运行主循环
-    window.mainloop()
-except serial.SerialException as e:
-    print("Serial error: ", e)
+    canvas.delete(tk.ALL)
+
+    for i in range(1, n_row):  # horizontal lines
+        canvas.create_line(0, grid_height * i, canvas_width, grid_height * i, fill='white')
+    for j in range(1, n_col):
+        canvas.create_line(grid_width * j, 0, grid_width * j, canvas_height, fill='white')
+    window.update()
+# 运行主循环
+window.mainloop()
 
 # with open("input2.txt") as f:
 #     coord_list = []
