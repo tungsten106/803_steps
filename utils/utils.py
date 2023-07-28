@@ -9,7 +9,8 @@ import cv2
 #                            [1300,2430]])
 #
 # output_points = np.float32([[0, 0], [1917-1, 0], [1917-1, 1080-1], [0, 1080-1]])
-
+output_points = np.float32([[0, 0], [canvas_width-1, 0],
+                            [canvas_width-1, canvas_height-1], [0, canvas_height-1]])
 
 def mapping_position(x, y):
     transform_matrix = cv2.getPerspectiveTransform(input_points, output_points)
